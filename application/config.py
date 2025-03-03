@@ -12,3 +12,4 @@ class LocalDevelopmentConfig(Config):
     SECURITY_PASSWORD_SALT="this-is-password-salt" #helps in hashing the password
     WTF_CSRF_ENABLED=False  #related to the forms
     SECURITY_TOKEN_AUTHENTICATION_HEADER="Authentication-Token"
+   
