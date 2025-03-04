@@ -38,9 +38,32 @@ def create_customer():
     
         db.session.commit()
         return jsonify({
-            "message":"User created successfully"
+            "message":"Customer created successfully"
         }), 201
     return jsonify({
-            "message":"User already exists"
+            "message":"Customer already exists"
         }), 400
     
+@app.route('/api/professional/register',methods=['POST'])
+def create_professional():
+    credentials=request.get_json()
+    
+    if not app.security.datastore.find_user(email=credentials["email"]):
+        app.security.datastore.create_user(email=credentials["email"],
+                                           username=credentials["username"],
+                                           password=hash_password(credentials["password"]),
+                                           roles=["professional"],
+                                           city=credentials["city"],
+                                           service_type=credentials["service_type"],
+                                           bio=credentials["bio"],
+                                           experience=credentials["experience"],
+                                           verification_document=credentials["verification_document"]
+                                           ) 
+
+        db.session.commit()
+        return jsonify({
+            "message":"Professional account created successfully"
+        }), 201
+    return jsonify({
+            "message":"Professional already exists"
+        }), 400

@@ -26,7 +26,7 @@ class User(db.Model, UserMixin):
     city = db.Column(db.String(50), nullable=True)
 
     # Professional-specific fields
-    service_type_id = db.Column(db.Integer, db.ForeignKey('service.id'), nullable=True)  # For professionals
+    service_type= db.Column(db.Integer, db.ForeignKey('service.name'), nullable=True)  # For professionals
     experience = db.Column(db.Integer, nullable=True)
     bio = db.Column(db.Text, nullable=True)
     verified = db.Column(db.Boolean, default=False, nullable=True)
