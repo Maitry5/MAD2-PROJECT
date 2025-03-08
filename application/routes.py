@@ -44,6 +44,9 @@ def create_customer():
             "message":"Customer already exists"
         }), 400
     
+    
+    
+    
 @app.route('/api/professional/register',methods=['POST'])
 def create_professional():
     credentials=request.get_json()
