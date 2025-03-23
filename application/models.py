@@ -26,10 +26,10 @@ class User(db.Model, UserMixin):
     city = db.Column(db.String(50), nullable=True)
 
     # Professional-specific fields
-    service_type= db.Column(db.Integer, db.ForeignKey('service.name'), nullable=True)  # For professionals
+    service_type= db.Column(db.Integer, db.ForeignKey('service.id'), nullable=True)  # For professionals
     experience = db.Column(db.Integer, nullable=True)
     bio = db.Column(db.Text, nullable=True)
-    verified = db.Column(db.Boolean, default=False, nullable=True)
+    verified = db.Column(db.Boolean, default=None,nullable=True)
     verification_document = db.Column(db.String(255), nullable=True)
 
     # Relationships
@@ -53,7 +53,6 @@ class Service(db.Model):
     time_required = db.Column(db.String(50), nullable=True)
 
     # Relationship with professionals and service requests
-    professionals = db.relationship('User', backref='service', lazy=True)
     service_requests = db.relationship('ServiceRequest', backref='service', lazy=True)
 
 
@@ -66,8 +65,8 @@ class ServiceRequest(db.Model):
     date_requested = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     date_completed = db.Column(db.DateTime, nullable=True)
 
-    Address=db.Column(db.Text, nullable=True)
-    offered_price=db.Column(db.Integer)
+    address=db.Column(db.Text, nullable=True)
+    offered_price=db.Column(db.Integer,nullable=False)
     
     status = db.Column(db.String(20), nullable=False, default='requested')  # requested, assigned, closed, rejected
     
@@ -78,5 +77,7 @@ class ServiceRequest(db.Model):
         CheckConstraint(
             "status IN ('requested', 'assigned', 'closed', 'rejected')",
             name='check_service_request_status'
+            
         ),
+        CheckConstraint("rating >= 1 AND rating <= 5", name='check_rating_range')
     )
