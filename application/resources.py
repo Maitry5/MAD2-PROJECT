@@ -1,14 +1,12 @@
 from flask_restful import Api,Resource,reqparse
 from .models import *
 from flask_security import auth_required,roles_required,current_user,roles_accepted
+from .utils import roles_list
+from flask import jsonify
 
 api=Api()
 
-def roles_list(roles):
-    role_list=[]
-    for role in roles:
-        role_list.append(role.name)
-    return role_list
+
 
 
 
@@ -51,8 +49,6 @@ admin_search_professional_parser.add_argument('experience', type=int, help="expe
 
 #####SERVICES
 class ServiceApi(Resource):
-    @auth_required('token')
-    @roles_accepted('admin','customer')
     def get(self):
         services=[]
         service_jsons=[]
@@ -69,11 +65,10 @@ class ServiceApi(Resource):
             service_jsons.append(this_service)
         
         if service_jsons:
-            return service_jsons
+            return jsonify(service_jsons)
     
-        return {
-            "message":"No service found"
-        },404
+        return jsonify({"message":"No service found"}),404
+    
         
     
     @auth_required('token')
@@ -404,8 +399,8 @@ api.add_resource(AdminUserApi, '/api/admin/all_<string:user_type>')
 api.add_resource(AdminBlockUserApi, '/api/admin/block_user/<int:user_id>')
 
 api.add_resource(AdminVerificationRequest,
-                "api/admin/requests/get",
-                "api/admin/verify/<int:professional_id>",) 
+                "/api/admin/requests/get",
+                "/api/admin/verify/<int:professional_id>",) 
 
 api.add_resource(AdminSearchProfessionalApi, '/api/admin/search_professionals')         
             
