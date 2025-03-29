@@ -33,6 +33,7 @@ class User(db.Model, UserMixin):
     verification_document = db.Column(db.String(255), nullable=True)
 
     # Relationships
+    service = db.relationship('Service', foreign_keys=[service_type], backref='professionals')
     service_requests_as_customer = db.relationship('ServiceRequest', foreign_keys='ServiceRequest.customer_id', backref='customer', lazy=True)
     service_requests_as_professional = db.relationship('ServiceRequest', foreign_keys='ServiceRequest.professional_id', backref='professional', lazy=True)
 
@@ -53,6 +54,8 @@ class Service(db.Model):
     time_required = db.Column(db.String(50), nullable=True)
 
     # Relationship with professionals and service requests
+
+
     service_requests = db.relationship('ServiceRequest', backref='service', lazy=True)
 
 

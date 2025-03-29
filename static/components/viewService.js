@@ -8,7 +8,7 @@ export default {
           <p class="d-flex justify-content-between"><strong>Service ID</strong> <span>{{ service.id }}</span></p>
           <p class="d-flex justify-content-between"><strong>Description</strong> <span>{{ service.description }}</span></p>
           <p class="d-flex justify-content-between"><strong>Base Price</strong> <span>INR {{ service.base_price }}</span></p>
-          <p class="d-flex justify-content-between"><strong>Time Required</strong> <span>{{ service.time_required }} mins</span></p>
+          <p class="d-flex justify-content-between"><strong>Time Required</strong> <span>{{ service.time_required }} hours</span></p>
           <p class="d-flex justify-content-between"><strong>Verified Professionals</strong> <span>{{ verifiedProfessionals }}</span></p>
           <p class="d-flex justify-content-between"><strong>Total Service Requests</strong> <span>{{ service.service_requests ? service.service_requests.length : 0 }}</span></p>
          

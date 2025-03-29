@@ -11,7 +11,7 @@ export default {
         <!-- Centered Links -->
         <div class="d-flex gap-4 fs-4 flex-grow-1 justify-content-center">
             <router-link class="nav-link" :to="'/admin'" :class="{ 'fw-bold': $route.path === '/admin' }">Home</router-link>
-            <router-link class="nav-link" :to="'/admin/requests'" :class="{ 'fw-bold': $route.path === '/admin/requests' }">Requests</router-link>
+            <router-link class="nav-link" :to="'/adminrequest'" :class="{ 'fw-bold': $route.path === '/adminrequest' }">Requests</router-link>
             <router-link class="nav-link" :to="'/admin/search'" :class="{ 'fw-bold': $route.path === '/admin/search' }">Search</router-link>
         </div>
 

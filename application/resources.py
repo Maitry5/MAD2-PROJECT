@@ -344,37 +344,41 @@ class AdminVerificationRequest(Resource):
     def get(self):
         professionals=[]
         professional_jsons=[]
-        professionals = User.query.filter(User.roles.any(name="professional"), User.verified == None).all()
+        professionals = User.query.filter(User.roles.any(name="professional"), User.verified.is_(None)).all()
+
       
         for prof in professionals:
             this_prof={}
             this_prof["id"]=prof.id
-            this_prof["name"]=prof.name
+            this_prof["name"]=prof.username
             this_prof["experience"]=prof.experience
-            this_prof["service_type"]=prof.service_type
+            this_prof["service_type"]=prof.service.name
             this_prof["verification_document"]=prof.verification_document
           
             professional_jsons.append(this_prof)
         
         if professional_jsons:
             return professional_jsons
-    
-        return {
+        else:  return {
             "message":"No new request found"
         },404
+        
+        
+        
         
     @auth_required('token')
     @roles_required('admin')
     def put(self,professional_id):
         args = verification_parser.parse_args()
-        professional = User.query.filter(User.id == professional_id, User.is_verified == None).first()
+        professional = User.query.filter(User.id == professional_id, User.verified == None).first()
         professional.verified= args['verified']
         db.session.commit()
         status = "accepted" if args["verified"] else "rejected"
         return {"message": f"Professional verification status updated to {status}."}, 200
         
-        
-
+api.add_resource(AdminVerificationRequest,
+                "/api/admin/requests",
+                "/api/admin/verify/<int:professional_id>",) 
 
 
 
@@ -420,9 +424,7 @@ class AdminSearchProfessionalApi(Resource):
 api.add_resource(AdminUserApi, '/api/admin/all_<string:user_type>')
 api.add_resource(AdminBlockUserApi, '/api/admin/block_user/<int:user_id>')
 
-api.add_resource(AdminVerificationRequest,
-                "/api/admin/requests/get",
-                "/api/admin/verify/<int:professional_id>",) 
+
 
 api.add_resource(AdminSearchProfessionalApi, '/api/admin/search_professionals')         
             

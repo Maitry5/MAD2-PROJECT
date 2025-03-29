@@ -12,6 +12,7 @@ import Professional from "./components/DashProfessional.js"
 import CreateService from "./components/CreateService.js"
 import EditService from "./components/EditService.js"
 import viewService from "./components/viewService.js"
+import AdminRequest from "./components/AdminRequests.js"
 
 const routes=[
     {path:'/',component:Login},
@@ -22,7 +23,8 @@ const routes=[
     {path:'/professional',component:Professional,meta: { requiresAuth: true, role: "professional" }},
     {path:'/admin/create_service',component:CreateService,meta: { requiresAuth: true, role: "admin" }},
     {path:'/adminedit/:id',name:'adminedit',component:EditService, props: true,meta:{requiresAuth: true, role: "admin" }},
-    {path:'/adminview/:id',name:'adminview',component:viewService, props: true,meta:{requiresAuth: true, role: "admin" }}
+    {path:'/adminview/:id',name:'adminview',component:viewService, props: true,meta:{requiresAuth: true, role: "admin" }},
+    {path:'/adminrequest',component:AdminRequest,meta: { requiresAuth: true, role: "admin" }}
 ]
 
 const router=new VueRouter({
