@@ -1,15 +1,17 @@
 from flask import jsonify,request,render_template
 from flask_sqlalchemy import SQLAlchemy
-from flask_security import auth_required,roles_required,current_user,hash_password,login_user, verify_password
+from flask_security import auth_required,roles_required,current_user,hash_password,login_user, verify_password,logout_user
 from .database import db
 from .models import  User, Service,Role
 from .utils import roles_list
 import logging
-from werkzeug.security import generate_password_hash
+
 
 logging.basicConfig(level=logging.INFO)
 
 from app import app
+
+
 
 
 @app.route('/',methods=["GET"])
@@ -26,9 +28,9 @@ def admin_home():
     }
     
 
-@app.route('/api/home')
-@auth_required('token')
+@app.route('/api/customer',methods=["GET"])
 @roles_required('customer')
+@auth_required('token')
 def user_home():
     user=current_user
     return jsonify({
@@ -37,6 +39,37 @@ def user_home():
         "password": user.password    
     })
     
+    
+
+@app.route('/api/professional',methods=["GET"])
+@roles_required('professional')
+@auth_required('token')
+def prof_home():
+    user=current_user
+    service_requests = [
+        {
+            "id": req.id,
+            "service_name": req.service.name,  # Assuming a relationship exists
+            "customer_name": req.customer.username,
+            "date_of_request": req.date_of_request,
+            "status": req.service_status,
+            "remarks": req.remarks
+        }
+        for req in user.service_requests_as_professional
+    ]
+    return jsonify({
+        "username":user.username,
+        "email":user.email,
+        "password": user.password,
+        "city":user.city,
+        "service_type" :user.service_type,
+        "experience":user.experience,
+        "bio":user.bio,
+        "service_requests" : service_requests
+        
+        
+        
+    })
 
 
 @app.route('/api/login', methods=['POST'])
@@ -47,6 +80,7 @@ def user_login():
     credentials = request.get_json()
     email = credentials.get("email")
     password = credentials.get("password")
+  
 
     with app.app_context():  # Ensure app context
         # Check if user exists
@@ -55,8 +89,11 @@ def user_login():
             return jsonify({"message": "User not found"}), 404
 
         # Check password
+        print(user.password)
+        print(password)
         if not verify_password(password, user.password):
-            return jsonify({"message": "Invalid credentials"}), 401
+            return jsonify({"message": "Password is incorrect"}), 401
+        
 
         # Check if professional is approved
         if "professional" in [role.name for role in user.roles]:
@@ -97,14 +134,14 @@ def create_customer():
         # Check if user already exists
         if not app.security.datastore.find_user(email=credentials["email"]):
             try:
-                # Hash password securely
-                hashed_password = generate_password_hash(credentials["password"], method='pbkdf2:sha256', salt_length=8)
+           
 
                 # Create new customer
+                password=hash_password(credentials["password"])
                 app.security.datastore.create_user(
                     email=credentials["email"],
                     username=credentials["username"],
-                    password=hashed_password,
+                    password=password,
                     roles=["customer"],
                     city=credentials["city"]
                 )
@@ -129,9 +166,11 @@ def create_professional():
     
     with app.app_context():
         if not app.security.datastore.find_user(email=credentials["email"]):
-            app.security.datastore.create_user(email=credentials["email"],
+            try:
+                password=hash_password(credentials["password"])
+                app.security.datastore.create_user(email=credentials["email"],
                                            username=credentials["username"],
-                                           password=generate_password_hash(credentials["password"], method='pbkdf2:sha256', salt_length=8),
+                                           password=password,
                                            roles=["professional"],
                                            city=credentials["city"],
                                            service_type=credentials["service_type"],
@@ -140,10 +179,13 @@ def create_professional():
                                            verification_document=credentials["verification_document"]
                                            ) 
 
-        db.session.commit()
-        return jsonify({
-            "message":"Professional account created successfully"
-        }), 201
+                db.session.commit()
+                return jsonify({
+                    "message":"Professional account created successfully"}), 201
+            except Exception as e:
+                db.session.rollback()
+                logging.error(f"Error creating customer: {str(e)}")
+                return jsonify({"message": f"Error creating customer: {str(e)}"}), 500
     return jsonify({
             "message":"Professional already exists"
         }), 400
@@ -182,4 +224,12 @@ def search_professionals():
     return jsonify(results)
     
 
-
+@app.route('/api/logout', methods=['POST'])
+@auth_required('token')  # Ensures only authenticated users can log out
+def logout():
+    try:
+        logout_user()  # Clears the user session
+        return jsonify({"message": "Logout successful"}), 200
+    except Exception as e:
+        logging.error(f"Logout error: {str(e)}")
+        return jsonify({"message": "Error logging out"}), 500

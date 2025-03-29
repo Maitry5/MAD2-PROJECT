@@ -39,7 +39,9 @@ export default {
                         <div class="mb-3">
                             <label for="service_type" class="form-label">Service Type:</label>
                             <select id="service_type" v-model="formData.service_type" class="form-control" required>
-                                <option v-for="service in services" :key="service.id" :value="service.name">{{ service.name }}</option>
+                                 <option v-for="service in services" :key="service.id" :value="service.id">
+                                        {{ service.name }}
+                                </option>
                             </select>
                         </div>
 
@@ -83,19 +85,19 @@ export default {
         };
     },
     mounted() {
-        this.fetchServices();
+        fetch('api/service/get',{
+            method:'GET',
+            headers:{
+                "Content-Type":"application/json",
+                "Authentication-Token":localStorage.getItem("auth_token")
+            }
+        })
+        .then(response=>response.json())
+        .then(data=>{
+            console.log("Fetched services:", data.services);
+            this.services=data.services})
     },
     methods: {
-        fetchServices() {
-            fetch("/api/service/get")
-                .then(response => response.json())
-                .then(data => {
-                    this.services = data;
-                })
-                .catch(error => {
-                    console.error("Error fetching services:", error);
-                });
-        },
         registerProfessional() {
             fetch("/api/professional/register", {
                 method: "POST",

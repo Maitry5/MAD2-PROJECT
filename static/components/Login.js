@@ -65,7 +65,7 @@ export default {
             fetch('/api/login', {
                 method: 'POST',
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(this.formData)
+                body: JSON.stringify(this.formData) //the content goes to backend as JSON string
             })
             .then(response => response.json())
             .then(data => {
@@ -74,6 +74,8 @@ export default {
                     localStorage.setItem("auth_token", data["auth_token"]);
                     localStorage.setItem("id", data.user.id);
                     localStorage.setItem("username", data.user.username);
+                    localStorage.setItem("authRole", JSON.stringify(data.user.roles));
+    
                     console.log("User Roles:", data.user.roles);
                     if(data.user.roles.includes('admin')){
                         this.$router.push('/admin');}
@@ -84,7 +86,7 @@ export default {
                         this.$router.push('/professional'); }
                     }
                 else{
-                    this.message = data.message || "Invalid credentials!";}
+                    this.message = data.message }
                 })     
         },
         goToCustomerRegister() {

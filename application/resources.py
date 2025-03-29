@@ -49,25 +49,46 @@ admin_search_professional_parser.add_argument('experience', type=int, help="expe
 
 #####SERVICES
 class ServiceApi(Resource):
-    def get(self):
-        services=[]
-        service_jsons=[]
-    
-        services=Service.query.all()
-      
-        for service in services:
-            this_service={}
-            this_service["id"]=service.id
-            this_service["name"]=service.name
-            this_service["description"]=service.description
-            this_service["base_price"]=service.base_price
-            this_service["time_required"]=service.time_required
-            service_jsons.append(this_service)
-        
-        if service_jsons:
-            return jsonify(service_jsons)
-    
-        return jsonify({"message":"No service found"}),404
+    @auth_required('token')
+    @roles_accepted('admin', 'customer')
+    def get(self,service_id=None):
+        try:
+            if service_id:  # Fetch a specific service
+                service = Service.query.get(service_id)
+                if not service:
+                    return {"message": "Service not found"}, 404
+
+                return {
+                    "id": service.id,
+                    "name": service.name,
+                    "description": service.description,
+                    "base_price": service.base_price,
+                    "time_required": service.time_required
+                }, 200
+                
+                
+                
+            services = Service.query.all()
+
+            service_jsons = [
+                {
+                    "id": service.id,
+                    "name": service.name,
+                    "description": service.description,
+                    "base_price": service.base_price,
+                    "time_required": service.time_required
+                }
+                for service in services
+            ]
+
+            if service_jsons:
+                return {"services": service_jsons}, 200  # ✅ Return a dictionary, Flask-RESTful converts it to JSON
+
+            return {"message": "No service found"}, 404  # ✅ No `jsonify()`
+
+        except Exception as e:
+            return {"error": str(e)}, 500  # Handle unexpected errors properly
+
     
         
     
@@ -123,6 +144,7 @@ class ServiceApi(Resource):
         
         
 api.add_resource(ServiceApi,'/api/service/get',
+                            '/api/service/<int:service_id>',
                             '/api/service/create',
                             '/api/service/update/<int:service_id>',
                             '/api/service/delete/<int:service_id>')

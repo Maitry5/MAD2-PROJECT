@@ -1,22 +1,16 @@
 export default {
     template: `
-    <nav class="navbar sticky-top bg-light shadow-sm ps-3">
+    <nav class="navbar sticky-top bg-light shadow-sm px-4">
         <div class="d-flex align-items-center">
             <router-link class="navbar-brand d-flex align-items-center" to="/admin">
                 <img src="/static/logo.png" alt="logo" width="60" height="55" style="border-radius: 50%;">
-                <span class="ms-2 fw-bold">Home Services</span>
+                <span class="ms-2 fw-bold">The A to Z Home Service App</span>
             </router-link>
         </div>
 
-        <!-- Centered Links -->
-        <div class="d-flex gap-5 fs-4 flex-grow-1 justify-content-center pe-5 me-5">
-            <router-link class="nav-link" :to="'/customer'" :class="{ 'fw-bold': $route.path === '/customer' }">Home</router-link>
-            <router-link class="nav-link" :to="'/customer/requests'" :class="{ 'fw-bold': $route.path === '/customer/requests' }">Requests</router-link>
-            <router-link class="nav-link" :to="'/customer/search'" :class="{ 'fw-bold': $route.path === '/customer/search' }">Search</router-link>
-        </div>
 
         <!-- Logout button on the right -->
-        <div class=" pe-5">
+        <div class="ms-auto pe-4">
             <button class="btn btn-primary" @click="logout">Logout</button>
         </div>
     </nav>
