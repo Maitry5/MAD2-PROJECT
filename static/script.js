@@ -13,6 +13,14 @@ import CreateService from "./components/CreateService.js"
 import EditService from "./components/EditService.js"
 import viewService from "./components/viewService.js"
 import AdminRequest from "./components/AdminRequests.js"
+import AllUsers from "./components/AllUsers.js"
+import AdminSearch from "./components/AdminSearch.js"
+import CustomerSearch from "./components/CustomerSearch.js"
+import SelectProf from "./components/ProfList.js"
+import CreateSR from "./components/CreateSR.js"
+import SR from "./components/ServiceRequest.js"
+import EditSR from "./components/EditSR.js"
+import AdminSR from "./components/AdminDeleteSR.js"
 
 const routes=[
     {path:'/',component:Login},
@@ -24,7 +32,18 @@ const routes=[
     {path:'/admin/create_service',component:CreateService,meta: { requiresAuth: true, role: "admin" }},
     {path:'/adminedit/:id',name:'adminedit',component:EditService, props: true,meta:{requiresAuth: true, role: "admin" }},
     {path:'/adminview/:id',name:'adminview',component:viewService, props: true,meta:{requiresAuth: true, role: "admin" }},
-    {path:'/adminrequest',component:AdminRequest,meta: { requiresAuth: true, role: "admin" }}
+    {path:'/adminrequest',component:AdminRequest,meta: { requiresAuth: true, role: "admin" }},
+    {path:'/adminall/:usertype',name:'adminall',component:AllUsers,props: true,meta: { requiresAuth: true, role: "admin" }},
+    {path:'/adminsearch',component:AdminSearch},
+    {path:'/customer/search',component:CustomerSearch},
+    {path:'/customer/selectprof/:id',name:'customer/selectprof',component:SelectProf, props: true,meta:{requiresAuth: true, role: "customer" }},
+    {path:'/customer/createSR/:service_id/:prof_id',name:'customer/createSR',component:CreateSR,props:true,meta: { requiresAuth: true, role: "customer" }},
+    {path:'/customer/SR',component:SR,meta: { requiresAuth: true, role: "customer" }},
+    {path:'/customer/edit/:srid',name:'customer/edit',component:EditSR, props: true,meta:{requiresAuth: true, role: "admin" }},
+    {path:'/admin/SR',component:AdminSR}
+
+
+   
 ]
 
 const router=new VueRouter({
@@ -44,7 +63,7 @@ const app=new Vue({
          <component v-if="currentNavbar" :is="currentNavbar"></component>
     
         <!-- Main Content -->
-        <div class="flex-grow-1">
+        <div class="d-flex flex-grow-1 flex-column  overflow-auto">
             <router-view></router-view>
         </div>
     

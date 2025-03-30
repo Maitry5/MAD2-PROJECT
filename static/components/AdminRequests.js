@@ -86,7 +86,6 @@ export default {
             })
             .then(response => response.json())
             .then(data => {
-                alert(data.message);
                 this.fetchProfessionals(); // Refresh list
             })
             .catch(error => {

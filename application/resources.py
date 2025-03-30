@@ -3,7 +3,8 @@ from .models import *
 from flask_security import auth_required,roles_required,current_user,roles_accepted
 from .utils import roles_list
 from flask import jsonify
-
+from flask import request
+from datetime import datetime
 api=Api()
 
 
@@ -17,22 +18,7 @@ service_parser.add_argument('description')
 service_parser.add_argument('base_price', type=float)
 service_parser.add_argument('time_required', type=int)
 
-### SERVICE REQUEST PARSER
-service_req_parser = reqparse.RequestParser()
-service_req_parser.add_argument('service_id', required=True, type=int)
-service_req_parser.add_argument('customer_id', required=True, type=int)
-service_req_parser.add_argument('professional_id', type=int)
-service_req_parser.add_argument('date_requested')
-service_req_parser.add_argument('date_completed')
-service_req_parser.add_argument('address')
-service_req_parser.add_argument('offered_price', type=float)
-service_req_parser.add_argument('status')
-service_req_parser.add_argument('rating', type=int)
-service_req_parser.add_argument('remarks')
 
-### SERVICE REQUEST STATUS PARSER
-status_parser = reqparse.RequestParser()
-status_parser.add_argument('status', required=True, help="Status is required")
 
 ### ADMIN VERIFICATION PARSER
 verification_parser = reqparse.RequestParser()
@@ -40,10 +26,24 @@ verification_parser.add_argument('verified', type=bool, required=True, help="Ver
 
 
 admin_search_professional_parser = reqparse.RequestParser()
-admin_search_professional_parser.add_argument('name', type=str, help="Search by professional's name")
+admin_search_professional_parser.add_argument('username', type=str, help="Search by professional's name")
 admin_search_professional_parser.add_argument('service_type', type=str, help="Search by service type")
 admin_search_professional_parser.add_argument('city', type=str, help="Search by city")
 admin_search_professional_parser.add_argument('experience', type=int, help="experience should be greater than")
+
+### SERVICE REQUEST PARSER
+service_req_parser = reqparse.RequestParser()
+service_req_parser.add_argument("customer_id", type=int, required=True, help="Customer ID is required")
+service_req_parser.add_argument("service_id", type=int, required=True, help="Service ID is required")
+service_req_parser.add_argument("professional_id", type=int, required=True, help="Professional ID is required")
+service_req_parser.add_argument("address", type=str, required=True, help="Address is required")
+service_req_parser.add_argument("offered_price", type=float, required=True, help="Offered Price is required")
+service_req_parser.add_argument("date_requested", type=str, required=True, help="Date Requested is required")
+
+service_req_parser.add_argument('status')
+service_req_parser.add_argument('rating')
+service_req_parser.add_argument('remarks')
+
 
 
 
@@ -63,7 +63,17 @@ class ServiceApi(Resource):
                     "name": service.name,
                     "description": service.description,
                     "base_price": service.base_price,
-                    "time_required": service.time_required
+                    "time_required": service.time_required,
+                    "professionals": [
+                        {
+                            "id": prof.id,
+                            "name": prof.username,
+                            "experience": prof.experience,
+                            "service_type": prof.service.name,
+                            "bio":prof.bio
+                        }
+                        for prof in service.professionals
+                    ]
                 }, 200
                 
                 
@@ -153,90 +163,140 @@ api.add_resource(ServiceApi,'/api/service/get',
 
 ###### SERVICE REQUEST
 
+
+
+
+
+### SERVICE REQUEST STATUS PARSER
+status_parser = reqparse.RequestParser()
+status_parser.add_argument('status', required=True, help="Status is required")
+
+
+
 class ServiceReqApi(Resource):
     @auth_required('token')
-    @roles_accepted('admin','professional','customer')
-    def get(self):
-        ser_req=[]
-        ser_req_jsons=[]
-        
-        if 'admin' in roles_list(current_user.roles): 
-            ser_req=ServiceRequest.query.all()
-        elif 'customer' in roles_list(current_user.roles):
-            ser_req=ServiceRequest.query.filter_by(customer_id=current_user.id).all()
-        elif 'professional' in roles_list(current_user.roles):
-            ser_req=ServiceRequest.query.filter_by(professional_id=current_user.id).all()
-        else:
-            return {
-                "message": "Unauthorized access"
-            }, 403  # Forbidden
+    @roles_accepted('admin', 'professional', 'customer')
+    def get(self, request_id=None):
+        try:
+            if request_id:
+                req = ServiceRequest.query.get(request_id)
+                if not req:
+                    return {"message": "Service request not found"}, 404
+                
+                return {
+                    "id": req.id,
+                    "service_id": req.service_id,
+                    "service_name": req.service.name if req.service else None,
+                    "base_price": req.service.base_price if req.service else None,
+                    "customer_id": req.customer_id,
+                    "professional_name": req.professional.username if req.professional else  "Not Assigned",
+                    "address": req.address,
+                    "offered_price": req.offered_price,
+                    "date_requested": req.date_requested.isoformat() if req.date_requested else None,
+                    "date_completed": req.date_completed.isoformat() if req.date_completed else None,
+                    "status": req.status,
+                    "rating": req.rating
+                }, 200
 
-      
-        
-        for req in ser_req:
-            this_req={}
-            this_req["service_id"]=req.service_id
-            this_req["customer_id"]=req.customer_id
-            this_req["professional_id"]=req.professional_id
-            this_req["address"]=req.address
-            this_req["offered_price"]=req.offered_price
-            this_req["date_completed"]=req.date_completed
-            this_req["date_requested"]=req.date_requested.date().isoformat()
-            this_req["status"]=req.status
-            this_req["rating"]=req.rating
-            this_req["remarks"]=req.remarks
-            ser_req_jsons.append(this_req)
+            user_roles = [role.name for role in current_user.roles]
             
-        
-        if ser_req_jsons:
-            return ser_req_jsons
+            if 'admin' in user_roles:
+                requests = ServiceRequest.query.all()
+            elif 'customer' in user_roles:
+                requests = ServiceRequest.query.filter_by(customer_id=current_user.id).all()
+            elif 'professional' in user_roles:
+                requests = ServiceRequest.query.filter_by(professional_id=current_user.id).all()
+            else:
+                return {"message": "Unauthorized access"}, 403
+
+            request_jsons = []
+            for req in requests:
+                request_data = {
+                    "id": req.id,
+                    "service_id": req.service_id,
+                    "service_name": req.service.name if req.service else "N/A",
+                    "base_price": req.service.base_price if req.service else None,
+                    "customer_id": req.customer_id,
+                    "professional_name": req.professional.username if req.professional else "Not Assigned",
+                    "address": req.address,
+                    "offered_price": req.offered_price,
+                    "date_requested": req.date_requested.isoformat() if req.date_requested else None,
+                    "date_completed": req.date_completed.isoformat() if req.date_completed else None,
+                    "status": req.status,
+                    "rating": req.rating
+                }
+                request_jsons.append(request_data)
+
+            return {"requests": request_jsons}, 200
+
     
-        return {
-            "message":"No service request found"
-        },404
+        except Exception as e:
+            return {"error": str(e)}, 500
+
+
         
         
     @auth_required('token')
     @roles_required('customer')
     def post(self):
-        args=service_req_parser.parse_args()
+        args = service_req_parser.parse_args()
+        print("Parsed Arguments:", args)
+        if isinstance(args["date_requested"], str):  
+             args["date_requested"] = datetime.strptime(args["date_requested"], "%Y-%m-%d").date()
+
+      
+        # Validate required fields
         try:
-            req=ServiceRequest(service_id=args["service_id"],
-                        customer_id=args["customer_id"],
-                        professional_id=args["professional_id"],
-                        address=args["address"],
-                        offered_price=args["offered_price"],
-                        date_completed=args["date_completed"],
-                        status=args["status"],
-                        rating=args["rating"],
-                        remarks=args["remarks"])
-            
+            if not all([args.get("customer_id"), args.get("service_id"), args.get("professional_id")]):
+             return {"message": "Missing required fields"}, 400  # Early validation check
+        
+            req = ServiceRequest(
+                customer_id=args["customer_id"],
+                service_id=args["service_id"],
+                professional_id=args["professional_id"],
+                address=args["address"],
+                offered_price=args["offered_price"],
+                date_requested=args["date_requested"]
+        )
+        
             db.session.add(req)
             db.session.commit()
-            return {
-                "message":"Service Request created successfully"
-            },200
-        except:
-            return {
-                "message":"One or more required fields are missing"
-            },400
+            return {"message": "Service Request created successfully"}, 200
+        
+        except Exception as e:
+            return {"message": f"Unexpected error: {str(e)}"}, 500
     
+    
+
+
     @auth_required('token')
-    @roles_accepted('customer')
-    def put(self,request_id):
-        args=service_req_parser.parse_args()
-        req=ServiceRequest.query.get(request_id)
-        if 'customer' in roles_list(current_user.roles):
-            req.status=args['status']
-            req.address=args['address']
-            req.date_requested=args['date_requested']
-            req.offered_price=args['offered_price']
+    @roles_required('customer')
+    def put(self, request_id):
+            args = service_req_parser.parse_args()
+            print("Parsed Arguments:", args)  # Debugging
+
+            try:
+                service_request = ServiceRequest.query.get(request_id)
+                if not service_request:
+                    return {"message": "Service Request not found"}, 404
+                
+                # Update fields only if provided
+                if args.get("address"):
+                    service_request.address = args["address"]
+                if args.get("offered_price"):
+                    service_request.offered_price = args["offered_price"]
+                if args.get("date_requested"):
+                    service_request.date_requested = datetime.strptime(args["date_requested"], "%Y-%m-%d").date()
+
+                db.session.commit()
+                return {"message": "Service Request updated successfully"}, 200
             
-            
-        db.session.commit()
-        return {
-            "message":"Service Request updated successfully"
-        }
+            except Exception as e:
+                print("Error:", e)  # Debugging
+                return {"message": f"Unexpected error: {str(e)}"}, 500
+
+
+    
     
     @auth_required('token')
     @roles_required('admin')
@@ -254,13 +314,18 @@ class ServiceReqApi(Resource):
             },404
              
 
-api.add_resource(ServiceReqApi,'/api/service_request/get',
+api.add_resource(ServiceReqApi,'/api/service_request',
+                                '/api/service_request/<int:request_id>',
                                 '/api/service_request/create',
                                 '/api/service_request/update/<int:request_id>',
                                 '/api/service_request/delete/<int:request_id>')
 
 
 
+from datetime import datetime
+
+status_parser = reqparse.RequestParser()
+status_parser.add_argument('status', required=True, help="Status is required")
 class ServiceReqStatusUpdateApi(Resource):
     @auth_required('token')
     @roles_accepted('professional', 'customer')
@@ -271,13 +336,24 @@ class ServiceReqStatusUpdateApi(Resource):
         if not req:
             return {"message": "Service Request not found"}, 404
         
-        if 'customer' in roles_list(current_user.roles) or 'professional' in roles_list(current_user.roles):
-            req.status = args['status']
+        # Check permissions
+        if 'professional' in roles_list(current_user.roles) or 'customer' in roles_list(current_user.roles):
+            new_status = args['status']
+            req.status = new_status
+            
+            # Automatically set completion date when closing
+            if new_status == 'closed':
+                req.date_completed = datetime.utcnow().date()
+            
             db.session.commit()
-            return {"message": "Service status updated successfully"}, 200
+            return {
+                "message": "Service status updated successfully",
+                "new_status": new_status,
+                "date_completed": req.date_completed.isoformat() if req.date_completed else None
+            }, 200
         
         return {"message": "Unauthorized action"}, 403
-    
+
 api.add_resource(ServiceReqStatusUpdateApi, '/api/service_request/update_status/<int:request_id>')
 
 
@@ -307,7 +383,7 @@ class AdminUserApi(Resource):
                 this_user["name"]=user.username
                 this_user["city"]=user.city
                 this_user["experience"]=user.experience
-                this_user["service_type"]=user.service_type
+                this_user["service_type"]=user.service.name
                 this_user["total_requests"]=len(user.service_requests_as_professional)
                 this_user["active"]=user.active
                 users_json.append(this_user)
@@ -323,7 +399,6 @@ class AdminUserApi(Resource):
         },404
 
 
-
 class AdminBlockUserApi(Resource):
     @auth_required('token')
     @roles_required('admin')
@@ -335,7 +410,20 @@ class AdminBlockUserApi(Resource):
         user.active = not user.active  # Toggle block status
         db.session.commit()
         
-        return {"message": f"User {'blocked' if user.is_blocked else 'unblocked'} successfully"}, 200
+        return {
+            "message": f"User {'blocked' if not user.active else 'unblocked'} successfully",
+            "active": user.active  # Return updated status
+        }, 200
+
+
+api.add_resource(AdminUserApi, '/api/admin/all_<string:user_type>')
+api.add_resource(AdminBlockUserApi, '/api/admin/block_user/<int:user_id>')
+
+
+
+
+
+
 
 
 class AdminVerificationRequest(Resource):
@@ -384,75 +472,72 @@ api.add_resource(AdminVerificationRequest,
 
 class AdminSearchProfessionalApi(Resource):
     @auth_required('token')
-    @roles_required('admin')
-    def get(self):
-        args = admin_search_professional_parser.parse_args()
-        
+    @roles_accepted('admin','customer')
+    def post(self):
+        data = request.json
+        print("Received Data:", data)  # Debugging
+
         # Base query for verified and active professionals
-        query = User.query.filter(User.roles.any(name="professional"), User.verified == True, User.active == True)
-        
+        query = User.query.filter(User.roles.any(name="professional"), User.verified == True)
+
         # Apply search filters if provided
-        if args["name"]:
-            query = query.filter(User.username.ilike(f"%{args['name']}%"))
-        if args["service_type"]:
-            query = query.filter(User.service_type.ilike(f"%{args['service_type']}%"))
-        if args["city"]:
-            query = query.filter(User.city.ilike(f"%{args['city']}%"))
+        if data.get("username"):
+            query = query.filter(User.username.ilike(f"%{data['username']}%"))
+        if data.get("service_type"):
+            query = query.filter(User.service_type.ilike(f"%{data['service_type']}%"))
+        if data.get("city"):
+            query = query.filter(User.city.ilike(f"%{data['city']}%"))
+      
         
         # Fetch professionals
         professionals = query.all()
 
         if not professionals:
             return {"message": "No professionals found"}, 404
-        
+
         # Construct response JSON
         professional_jsons = [{
             "id": prof.id,
             "name": prof.username,
             "city": prof.city,
             "experience": prof.experience,
-            "service_type": prof.service_type,
+            "service_type": prof.service.name,
             "total_requests": len(prof.service_requests_as_professional),
             "active": prof.active
         } for prof in professionals]
 
         return {"professionals": professional_jsons}, 200
-    
-
-
-        
-api.add_resource(AdminUserApi, '/api/admin/all_<string:user_type>')
-api.add_resource(AdminBlockUserApi, '/api/admin/block_user/<int:user_id>')
-
-
-
 api.add_resource(AdminSearchProfessionalApi, '/api/admin/search_professionals')         
             
             
 ###CUSTOMER - SEARCH 
-# Request parser for service search
-service_search_parser = reqparse.RequestParser()
-service_search_parser.add_argument('name', type=str, help="Search by service name (partial match)")
-service_search_parser.add_argument('min_time_required', type=int, help="Filter by time required (greater than)")
-service_search_parser.add_argument('max_base_price', type=float, help="Filter by base price (less than)")
-
 
 class SearchServiceApi(Resource):
     @auth_required('token')
     @roles_required('customer')
-    def get(self):
-        args = service_search_parser.parse_args()
-        
+    def post(self):
+        data = request.json
+        print("Received Data:", data)  # Debugging
+
         # Base query
-        query = Service.query.all()
-        
+        query = Service.query
+
         # Apply filters based on input
-        if args['name']:
-            query = query.filter(Service.name.ilike(f"%{args['name']}%"))
-        if args['min_time_required'] is not None:
-            query = query.filter(Service.time_required > args['min_time_required'])
-        if args['max_base_price'] is not None:
-            query = query.filter(Service.base_price < args['max_base_price'])
+        if data.get("name"):
+            query = query.filter(Service.name.ilike(f"%{data['name']}%"))
+        if "min_time_required" in data:
+            try:
+                min_time = int(data["min_time_required"])
+                query = query.filter(Service.time_required > min_time)
+            except ValueError:
+                return {"message": "Invalid min_time_required value"}, 400
+
+        if "max_base_price" in data:
+            try:
+                max_price = int(data["max_base_price"])
+                query = query.filter(Service.base_price < max_price)
+            except ValueError:
+                return {"message": "Invalid max_base_price value"}, 400
 
         # Fetch results
         services = query.all()
@@ -470,6 +555,5 @@ class SearchServiceApi(Resource):
         } for service in services]
 
         return {"services": service_jsons}, 200
-
 
 api.add_resource(SearchServiceApi, '/api/search_services')

@@ -2,7 +2,7 @@ from flask import jsonify,request,render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import auth_required,roles_required,current_user,hash_password,login_user, verify_password,logout_user
 from .database import db
-from .models import  User, Service,Role
+from .models import  User, Service,Role,ServiceRequest
 from .utils import roles_list
 import logging
 
@@ -41,35 +41,35 @@ def user_home():
     
     
 
-@app.route('/api/professional',methods=["GET"])
-@roles_required('professional')
+@app.route('/api/professional')
 @auth_required('token')
-def prof_home():
-    user=current_user
-    service_requests = [
-        {
-            "id": req.id,
-            "service_name": req.service.name,  # Assuming a relationship exists
-            "customer_name": req.customer.username,
-            "date_of_request": req.date_of_request,
-            "status": req.service_status,
-            "remarks": req.remarks
-        }
-        for req in user.service_requests_as_professional
-    ]
+@roles_required('professional')
+def get_professional():
+    professional = User.query.get(current_user.id)
+    service_requests = ServiceRequest.query.filter_by(professional_id=current_user.id).all()
+
     return jsonify({
-        "username":user.username,
-        "email":user.email,
-        "password": user.password,
-        "city":user.city,
-        "service_type" :user.service_type,
-        "experience":user.experience,
-        "bio":user.bio,
-        "service_requests" : service_requests
-        
-        
-        
+        "username": professional.username,
+        "bio": professional.bio,
+        "service_type": professional.service.name if professional.service else None,
+        "base_price": professional.service.base_price if professional.service else 0,
+        "city": professional.city,
+        "experience": professional.experience,
+        "service_requests": [
+            {
+                "id": req.id,
+                "customer_name": req.customer.username if req.customer else "N/A",
+                "date_requested": req.date_requested.isoformat() if req.date_requested else None,
+                "offered_price": req.offered_price,
+                "address": req.address,
+                "status": req.status,
+                "date_completed": req.date_completed.isoformat() if req.date_completed else None,
+                "rating": req.rating
+            }
+            for req in service_requests
+        ]
     })
+
 
 
 @app.route('/api/login', methods=['POST'])
@@ -87,16 +87,17 @@ def user_login():
         user = User.query.filter_by(email=email).first()
         if not user:
             return jsonify({"message": "User not found"}), 404
+        
+        if not user.active:
+            return jsonify({"message": "Your account has been blocked by the admin"}), 403
 
         # Check password
-        print(user.password)
-        print(password)
         if not verify_password(password, user.password):
             return jsonify({"message": "Password is incorrect"}), 401
         
-
+   
         # Check if professional is approved
-        if "professional" in [role.name for role in user.roles]:
+        if user.has_role("professional"):
             if user.verified is None:
                 return jsonify({"message": "Your account is pending approval"}), 403
             if user.verified is False:
@@ -113,7 +114,8 @@ def user_login():
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
-                "roles": roles_list(user.roles)  # Convert roles to a list of names
+                "roles": roles_list(user.roles),# Convert roles to a list of names
+               
             },
             "auth_token": auth_token
         }), 200
@@ -191,37 +193,7 @@ def create_professional():
         }), 400
 
 
-@app.route('/admin/search-professionals', methods=['GET'])
-def search_professionals():
-    name = request.args.get('name', '')
-    city = request.args.get('city', '')
-    experience = request.args.get('experience', 0, type=int)
-    service_type = request.args.get('service_type', '', type=int)
-    
-    query = User.query.filter(User.service_type.isnot(None))  # Filtering only professionals
-    
-    if name:
-        query = query.filter(User.username.ilike(f'%{name}%'))
-    if city:
-        query = query.filter(User.city.ilike(f'%{city}%'))
-    if experience:
-        query = query.filter(User.experience >= experience)
-    if service_type:
-        query = query.filter(User.service_type == service_type)
-    
-    professionals = query.all()
-    
-    results = [
-        {
-            'id': prof.id,
-            'name': prof.username,
-            'city': prof.city,
-            'experience': prof.experience,
-            'service_type': Service.query.get(prof.service_type).name if prof.service_type else None
-        } for prof in professionals
-    ]
-    
-    return jsonify(results)
+
     
 
 @app.route('/api/logout', methods=['POST'])

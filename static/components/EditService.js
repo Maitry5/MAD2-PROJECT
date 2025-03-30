@@ -1,7 +1,7 @@
 export default {
     template: `
-      <div class="row align-items-center justify-content-center mt-5">
-        <div class="col-md-4">
+      <div class="row align-items-center justify-content-center mt-5 mx-5">
+        <div class="col-md-2">
           <div class="card shadow-lg p-4">
             <h2 class="text-center mb-3">Edit Service</h2>
             <form @submit.prevent="edit">
@@ -21,7 +21,7 @@ export default {
               <!-- Base Price Field -->
               <div class="mb-3">
                 <label for="base_price" class="form-label">Base Price</label>
-                <input type="number" id="base_price" v-model="formData.base_price" class="form-control" step="0.01" required />
+                <input type="number" id="base_price" v-model="formData.base_price" class="form-control" step="10"  />
               </div>
               
               <!-- Time Required Field -->

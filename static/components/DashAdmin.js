@@ -4,12 +4,14 @@ export default {
         <div class="d-flex flex-column mt-5 mb-4 pt-4" style="height: 20vh;">
             <div class="d-flex justify-content-between mx-5 px-5"> 
                 <router-link to="/admin/create_service" class="fs-4 text-primary fw-bold">Add a Service</router-link>
-                <router-link to="/dashboard" class="fs-4 text-primary fw-bold">All Professionals</router-link>
+                <router-link :to="{ name: 'adminall', params: {usertype: 'professionals' } }" class="fs-4 text-primary fw-bold">All Professionals</router-link>
+
             </div>
                
             <div class="d-flex mt-5 mx-5 justify-content-between px-5">
-                <router-link to="/dashboard" class="fs-4 text-primary fw-bold">Recent Service Requests</router-link>
-                <router-link to="/dashboard" class="fs-4 text-primary fw-bold">All Customers</router-link>
+                <router-link to="/admin/SR" class="fs-4 text-primary fw-bold">Recent Service Requests</router-link>
+                <router-link :to="{ name: 'adminall', params: { usertype: 'customers' } }" class="fs-4 text-primary fw-bold">
+                    All Customers</router-link>
                 
             </div>
         </div>
@@ -67,7 +69,7 @@ export default {
             console.log(data)
             this.UserData=data})
 
-        fetch('api/service/get',{
+        fetch('/api/service/get',{
             method:'GET',
             headers:{
                 "Content-Type":"application/json",

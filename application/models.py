@@ -65,8 +65,8 @@ class ServiceRequest(db.Model):
     customer_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     professional_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
 
-    date_requested = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    date_completed = db.Column(db.DateTime, nullable=True)
+    date_requested = db.Column(db.Date,  nullable=False)
+    date_completed = db.Column(db.Date, nullable=True)
 
     address=db.Column(db.Text, nullable=True)
     offered_price=db.Column(db.Integer,nullable=False)
